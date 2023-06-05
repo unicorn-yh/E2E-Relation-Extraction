@@ -9,23 +9,13 @@ import numpy as np
 import random
 import time
 import os
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import matplotlib.pyplot as plt
-import numpy as np
-import random
-import math
-import time
 import pandas as pd
 import re
 import torchtext
-import matplotlib
 
 
 # 常量
-_WORD_SPLIT = re.compile(r"([.,!?\"':;)(])")  # Regex pattern for tokenization
+_WORD_SPLIT = re.compile(r"([.,!?\"':;)(])")  # 正则表达式模式
 TRAIN_FNAME = "e2e_dataset/trainset.csv" 
 DEV_FNAME = "e2e_dataset/devset.csv"
 TEST_FNAME = "e2e_dataset/testset.csv"
@@ -37,7 +27,7 @@ SOS_TOKEN = '<sos>'
 EOS_TOKEN = '<eos>'
 
 
-'''Config类用于定义全局变量'''
+'''Config类用于设置实验参数'''
 class Config:
     def __init__(self):
         self.save_data_path = "result/result.txt"
@@ -50,22 +40,19 @@ class Config:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.lr = 0.01
         self.max_len = MAX_LEN
-        self.batch_size = 1    # batch size of 1 just for simplicity  # DO NOT INCREASE THE BATCH SIZE
+        self.batch_size = 1    
         self.max_epoch = 1
 
 
 '''数据分析'''
 class Data_analysis():
     def __init__(self, save_path=DATA_LEN_HIST_PATH):
-        FNAME = os.path.abspath("e2e_dataset/trainset.csv") # fname of the training data
-        data = pd.read_csv(FNAME,dtype=str) # Pandas DataFrame obj holding data
+        data = pd.read_csv(TRAIN_FNAME,dtype=str) 
         references = [self.process_e2e_text(data.iloc[i]['ref']) for i in range(len(data))]
         self.references_lens = [len(d) for d in references]
         self.plot_len_hist(self.references_lens, save_path)
 
-    def process_e2e_text(self,s):
-        # Process E2E Challenge reference texts
-        # Represent each references as a list of tokens.
+    def process_e2e_text(self,s):   # 将每个ref表示为token列表。
         words = []
         for fragment in s.strip().split():
             fragment_tokens = _WORD_SPLIT.split(fragment)
@@ -73,10 +60,10 @@ class Data_analysis():
         tokens = [w for w in words if w]
         return tokens
 
-    def cnt_bins_and_cnts(self):
-        # Aux function to compute exact number of snt lengths
+    def cnt_bins_and_cnts(self):   # 用于计算句子长度的确切数量
         lengths_to_consider = [0,10,20,30,40,50,60,70,80]
-        bins = [(lengths_to_consider[i], lengths_to_consider[i+1]) for i in range(len(lengths_to_consider)-1)]
+        bins = [(lengths_to_consider[i], lengths_to_consider[i+1]) \
+                for i in range(len(lengths_to_consider)-1)]
         cnts = [0] * len(bins)
         for l in self.references_lens:
             for bin_idx, b in enumerate(bins):
@@ -85,18 +72,15 @@ class Data_analysis():
                     break
         return (bins, cnts)
 
-    def plot_len_hist(self, lens, fname):
-        # Aux function to plot a histogram of the distribution of lengths of references.
-        # Creating a Pandas DataFrame from a list of lengths 
+    def plot_len_hist(self, lens, fname):   # 绘制参考长度分布直方图
         references_lens_df = pd.DataFrame(self.references_lens)
-        # Retrieving stats from Pandas DF
-        mean = float(references_lens_df.mean())
+        mean = float(references_lens_df.mean())   # 检索统计数据
         std = float (references_lens_df.std())
         min_len = int(references_lens_df.min())
         max_len = int(references_lens_df.max())
 
-        # plot the histogram of the length distribution
-        plt.figure(0)
+        # 绘制长度分布的直方图
+        plt.figure(0)    
         plt.rcParams.update({'font.size': 12})
         n, bins, patches = plt.hist(lens, 20, facecolor='b', alpha=0.55)
         plt.xlabel('Sentence Length')
@@ -143,37 +127,13 @@ class E2EDataset(Dataset):
                 fields=[('src', src)],
                 filter_pred=self.len_filter_test
             )
-        src.build_vocab(self.train_data.src, self.dev_data.src, self.test_data.src, max_size=50000)
-        tgt.build_vocab(self.train_data.tgt, self.dev_data.tgt, self.test_data.tgt, max_size=50000)
+        src.build_vocab(self.train_data.src, self.dev_data.src, self.test_data.src, 
+                        max_size=50000)
+        tgt.build_vocab(self.train_data.tgt, self.dev_data.tgt, self.test_data.tgt, 
+                        max_size=50000)
         self.src_vocab = src.vocab
         self.tgt_vocab = tgt.vocab
         self.print_dataset_info(self.train_data, src, tgt, self.src_vocab, self.tgt_vocab)
-
-    def get_data(self, data_path):
-        """
-        """
-        src = torchtext.data.Field(
-            batch_first=True, 
-            include_lengths=True
-            )
-        tgt = torchtext.data.Field(
-            batch_first=True, 
-            preprocessing = lambda seq: [SOS_TOKEN] + seq + [EOS_TOKEN]
-            )
-
-        if data_path == TEST_FNAME:
-            data = torchtext.data.TabularDataset(
-                    path=data_path, format='csv',
-                    fields=[('src', src)],
-                    filter_pred=self.len_filter_test
-                )
-        else:
-            data = torchtext.data.TabularDataset(
-                    path=data_path, format='csv',
-                    fields=[('src', src), ('tgt', tgt)],
-                    filter_pred=self.len_filter
-                )
-        return data, src, tgt
         
     def len_filter(self, example):
         return len(example.src) <= MAX_LEN and len(example.tgt) <= MAX_LEN
@@ -361,7 +321,7 @@ def trainIters(data_train, encoder, decoder, n_iters, print_every=1000, learning
     return loss_ls
 
 
-'''使用贪心搜索算法解码器来进行评估'''
+'''使用贪心搜索算法编码器和解码器来进行评估'''
 def evaluate(encoder, decoder, sentence, max_length=MAX_LEN):
     with torch.no_grad():
         input_tensor = torch.tensor([SRC_VOCAB.stoi[word] for word in sentence], device=config.device)
@@ -435,8 +395,6 @@ class BLEU_Score():
         self.ngram = ngram
         src_unique = list(set([tuple(e.src) for e in self.data.examples[1:]]))
         self.BLEU_score = self.bleu(src_unique)
-        
-        
 
     def bleu(self, src_unique):
         BLEU_score = []
@@ -444,7 +402,6 @@ class BLEU_Score():
             BLEU_score.append(self.get_score(src, self.ngram))
         print("BLEU Score:",np.mean(BLEU_score))
         return BLEU_Score
-        
 
     ###Find all the references
     def get_ref_list(self, src):
@@ -524,8 +481,8 @@ def plot_loss(loss_ls, plot_save_path):
     plt.show()
 
 
-
-if __name__ == '__main__':
+'''主函数'''
+def main():
     # 分析数据
     analysis = Data_analysis()
 
@@ -563,7 +520,6 @@ if __name__ == '__main__':
                             learning_rate=config.lr, 
                             teacher_forcing_ratio=0.5)
     
-
     # 验证集用于评估和计算BLEU分数
     random_eval(dev_set, encoder, decoder)
     dev_bleu = BLEU_Score(data=dev_set, 
@@ -571,7 +527,6 @@ if __name__ == '__main__':
                       decoder=decoder,
                       ngram=4)
     
-
     # 将测试集的预测结果按要求保存在txt文件中
     eval_test(data=test_set, 
               encoder=encoder, 
@@ -583,6 +538,8 @@ if __name__ == '__main__':
               plot_save_path=config.plot_save_path)
     
 
+if __name__ == '__main__':
+    main()
 
 
     
