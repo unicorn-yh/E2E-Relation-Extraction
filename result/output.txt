@@ -1,0 +1,97 @@
+20 tokens from input vocab:
+['<unk>', '<pad>', 'customer', 'name[The', 'area[riverside],', 'of', 'out', '5],', 
+'eatType[coffee', 'shop],', 'than', 'familyFriendly[yes],', 'familyFriendly[yes]', 
+'area[city', 'centre],', 'eatType[pub],', 'priceRange[moderate],', 'food[Japanese],', 
+'rating[average],', 'priceRange[less']
+
+20 tokens from output vocab:
+ ['<unk>', '<pad>', 'is', '<eos>', '<sos>', 'a', 'The', 'the', 'in', 'near', 'of', 
+ 'and', 'food', 'customer', 'It', 'located', 'coffee', 'restaurant', 'has', 'shop']
+
+num training examples: 42038
+
+example train data:
+src:
+ ['name[Loch', 'Fyne],', 'eatType[restaurant],', 'food[English],', 'priceRange[more', 
+ 'than', '£30],', 'familyFriendly[yes]']
+tgt:
+ ['<sos>', 'Loch', 'Fyne,', 'is', 'a', 'children', 'friendly', 'English', 'restaurant', 
+ 'at', 'a', 'price', 'range', 'of', 'more', 'than', '£30.', '<eos>']
+
+SRC VOCAB LEN: 147
+TRG VOCAB LEN: 5121
+
+Running 1 epochs...
+step: 1000, avg loss: 4.32, time: 0.39 min
+step: 2000, avg loss: 3.89, time: 0.41 min
+step: 3000, avg loss: 3.64, time: 0.40 min
+step: 4000, avg loss: 3.44, time: 0.41 min
+step: 5000, avg loss: 3.32, time: 0.40 min
+step: 6000, avg loss: 3.19, time: 0.39 min
+step: 7000, avg loss: 3.10, time: 0.40 min
+step: 8000, avg loss: 3.09, time: 0.40 min
+step: 9000, avg loss: 3.00, time: 0.39 min
+step: 10000, avg loss: 2.96, time: 0.40 min
+step: 11000, avg loss: 2.94, time: 0.41 min
+step: 12000, avg loss: 2.95, time: 0.41 min
+step: 13000, avg loss: 2.87, time: 0.40 min
+step: 14000, avg loss: 2.83, time: 0.41 min
+step: 15000, avg loss: 2.90, time: 0.41 min
+step: 16000, avg loss: 2.81, time: 0.42 min
+step: 17000, avg loss: 2.81, time: 0.42 min
+step: 18000, avg loss: 2.85, time: 0.43 min
+step: 19000, avg loss: 2.79, time: 0.42 min
+step: 20000, avg loss: 2.79, time: 0.40 min
+step: 21000, avg loss: 2.82, time: 0.40 min
+step: 22000, avg loss: 2.76, time: 0.40 min
+step: 23000, avg loss: 2.79, time: 0.41 min
+step: 24000, avg loss: 2.83, time: 0.40 min
+step: 25000, avg loss: 2.76, time: 0.42 min
+step: 26000, avg loss: 2.73, time: 0.44 min
+step: 27000, avg loss: 2.75, time: 0.41 min
+step: 28000, avg loss: 2.73, time: 0.45 min
+step: 29000, avg loss: 2.68, time: 0.45 min
+step: 30000, avg loss: 2.67, time: 0.44 min
+step: 31000, avg loss: 2.68, time: 0.44 min
+step: 32000, avg loss: 2.68, time: 0.43 min
+step: 33000, avg loss: 2.67, time: 0.42 min
+step: 34000, avg loss: 2.70, time: 0.42 min
+step: 35000, avg loss: 2.63, time: 0.42 min
+step: 36000, avg loss: 2.62, time: 0.42 min
+step: 37000, avg loss: 2.62, time: 0.42 min
+step: 38000, avg loss: 2.65, time: 0.42 min
+step: 39000, avg loss: 2.63, time: 0.42 min
+step: 40000, avg loss: 2.58, time: 0.42 min
+step: 41000, avg loss: 2.69, time: 0.43 min
+step: 42000, avg loss: 2.61, time: 0.42 min
+End of epoch 1, avg loss 2.90
+
+Random evaluating dev dataset:
+['name[The', 'Golden', 'Palace],', 'eatType[coffee', 'shop],', 'food[English],', 
+'priceRange[cheap],', 'customer', 'rating[average],', 'area[riverside]']
+The Golden Palace is a cheap coffee shop with a average customer rating. <eos>
+
+['name[The', 'Golden', 'Palace],', 'eatType[coffee', 'shop],', 'food[English],', 
+'priceRange[moderate],', 'customer', 'rating[1', 'out', 'of', '5],', 'area[riverside]']
+The Golden Palace is a coffee shop with a moderate price range and a customer <eos>
+
+['name[The', 'Eagle],', 'eatType[coffee', 'shop],', 'food[English],', 
+'priceRange[moderate],', 'customer', 'rating[1', 'out', 'of', '5],', 'area[riverside],', 
+'familyFriendly[yes],', 'near[Burger', 'King]']
+<sos> <sos> The Eagle is a a friendly a coffee shop a food a a low It has a a a <eos>
+
+['name[Fitzbillies],', 'eatType[coffee', 'shop],', 'food[English],', 
+'priceRange[£20-25],', 'customer', 'rating[high],', 'area[riverside],', 
+'familyFriendly[yes]']
+coffee shop with a price range of 20-25 pounds. It is located in the riverside area and 
+has a customer rating of 3 out of 5. <eos>
+
+['name[The', 'Wrestlers],', 'customer', 'rating[low],', 'familyFriendly[no]']
+restaurant is a non family-friendly restaurant that has a customer rating of 1 out of 5. 
+<eos>
+
+
+Getting BLEU Score of dev dataset:
+BLEU Score: 0.5340316023952905
+
+Result of test set successfully saved to "result/result.txt"
