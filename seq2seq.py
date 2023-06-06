@@ -15,33 +15,33 @@ import torchtext
 
 
 # 常量
-_WORD_SPLIT = re.compile(r"([.,!?\"':;)(])")  # 正则表达式模式
-TRAIN_FNAME = "e2e_dataset/trainset.csv" 
-DEV_FNAME = "e2e_dataset/devset.csv"
-TEST_FNAME = "e2e_dataset/testset.csv"
-DATA_LEN_HIST_PATH = "result/data_len_hist.png"
-SRC_VOCAB = []
-TGT_VOCAB = []
-MAX_LEN = 50
-SOS_TOKEN = '<sos>'
-EOS_TOKEN = '<eos>'
+_WORD_SPLIT = re.compile(r"([.,!?\"':;)(])")     # 正则表达式模式
+TRAIN_FNAME = "e2e_dataset/trainset.csv"         # 训练集路径 
+DEV_FNAME = "e2e_dataset/devset.csv"             # 验证集路径
+TEST_FNAME = "e2e_dataset/testset.csv"           # 测试集路径
+DATA_LEN_HIST_PATH = "result/data_len_hist.png"  # 句长直方图存储路径
+SRC_VOCAB = []                                   # 输入词汇词典
+TGT_VOCAB = []                                   # 输出词汇词典
+MAX_LEN = 50                                     # 最大句长
+SOS_TOKEN = '<sos>'                              # 句子起始标记
+EOS_TOKEN = '<eos>'                              # 句子结束标记
 
 
 '''Config类用于设置实验参数'''
 class Config:
     def __init__(self):
-        self.save_data_path = "result/result.txt"
-        self.encoder_save_path = "model/encoder.mdl"
-        self.decoder_save_path = "model/decoder.mdl"
-        self.plot_save_path = "result/loss_plot.png"
-        self.input_dim = len(SRC_VOCAB)
-        self.output_dim = len(TGT_VOCAB)
-        self.hidden_size = 256
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.lr = 0.01
-        self.max_len = MAX_LEN
-        self.batch_size = 1    
-        self.max_epoch = 1
+        self.save_data_path = "result/result.txt"     # 结果存储路径
+        self.encoder_save_path = "model/encoder.mdl"  # 编码器模型存储路径
+        self.decoder_save_path = "model/decoder.mdl"  # 解码器模型存储路径
+        self.plot_save_path = "result/loss_plot.png"  # 训练集损失图存储路径
+        self.input_dim = len(SRC_VOCAB)               # 编码器输入维度
+        self.output_dim = len(TGT_VOCAB)              # 解码器输出维度
+        self.hidden_size = 256                        # 隐藏层维度
+        self.device = "cpu"                          # 设备
+        self.lr = 0.01                                # 学习率
+        self.max_len = MAX_LEN                        # 最大句长
+        self.batch_size = 1                           # 批次大小 
+        self.max_epoch = 1                            # 最大迭代次数
 
 
 '''数据分析'''
@@ -167,9 +167,9 @@ class Encoder(nn.Module):
 
     def forward(self, myinput, hidden):
         '''
-            1.forward()函数接收输入的id序列，送入Encoder，编码返回最后
-        一个token对应的隐藏状态用于初始化Decoder的隐藏状态
-            2.如果要采用Attention，Encoder需返回所有token对应的隐藏状态
+            1.forward()函数接收输入的id序列, 送入Encoder, 编码返回最后
+              一个token对应的隐藏状态用于初始化Decoder的隐藏状态
+            2.如果要采用Attention, Encoder需返回所有token对应的隐藏状态
         '''
         embedded = self.embedding(myinput)
         embedded = embedded.view(1, 1, -1)
@@ -177,7 +177,10 @@ class Encoder(nn.Module):
         output, hidden = self.gru(output, hidden)
         return output, hidden
 
-    def initHidden(self):
+    def initHidden(self): 
+        '''
+            初始化隐藏层
+        '''
         return torch.zeros(1, 1, self.hidden_size, device=config.device)
 
 
@@ -191,115 +194,108 @@ class Decoder(nn.Module):
         self.hidden_size = hidden_size
         self.embedding = nn.Embedding(output_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size)
-        self.out = nn.Linear(hidden_size, output_size)
+        self.fc = nn.Linear(hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
-
 
     def forward(self, input, hidden):
         '''
-            1.forward()函数以<sos>对应的id作为第一个输入，t时刻的输入为
-        t-1时刻的输出，解码出预测序列第t个token
-            2.解码过程迭代至预测出<eos>这一token，或者达到预设最大长度结束
-            3.如果采用Attention，需要在Decoder计算Attention Score
+            1.forward()函数以<sos>对应的id作为第一个输入, t时刻的输入为
+              t-1时刻的输出, 解码出预测序列第t个token
+            2.解码过程迭代至预测出<eos>这一token, 或者达到预设最大长度结束
+            3.如果采用Attention, 需要在Decoder计算Attention Score
         '''
         output = self.embedding(input).view(1, 1, -1)
         output = F.relu(output)
         output, hidden = self.gru(output, hidden)
-        output = self.softmax(self.out(output[0]))
+        output = self.softmax(self.fc(output[0]))
         return output, hidden
 
     def initHidden(self):
+        ''' 
+            初始化隐藏层 
+        '''
         return torch.zeros(1, 1, self.hidden_size, device=config.device)
     
 
-'''Seq2seq模型训练'''
-def train(input_tensor, target_tensor, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion,
-          max_length=MAX_LEN, teacher_forcing_ratio=0.5):
+'''Seq2Seq模型训练'''
+def seq2seq(input_tensor, output_tensor, encoder, decoder,
+            encoder_optimizer, decoder_optimizer, criterion,
+            max_length=MAX_LEN, teacher_forcing_ratio=0.5):
     
-    # get an initial hidden state for the encoder
-    encoder_hidden = encoder.initHidden()
-
-    # zero the gradients of the optimizers
-    encoder_optimizer.zero_grad()
+    encoder_hidden = encoder.initHidden()     # 初始化编码器隐藏层
+    encoder_optimizer.zero_grad()             # 将优化器的梯度设为0
     decoder_optimizer.zero_grad()
-
-    # get the seq lengths, used for iterating through encoder/decoder
-    input_length = input_tensor.size(0)
-    target_length = target_tensor.size(0)
-
-    # create empty tensor to fill with encoder outputs
-    encoder_outputs = torch.zeros(max_length, encoder.hidden_size, device=config.device)
-
-    # create a variable for loss
-    loss = 0
+    input_length = input_tensor.size(0)       # 获取输入张量的长度，用于编码器循环
+    output_length = output_tensor.size(0)     # 获取输出张量的长度，用于解码器循环
+    encoder_outputs = torch.zeros(            # 创建空张量用于填充编码器输出
+                        max_length, 
+                        encoder.hidden_size, 
+                        device=config.device)   
+    loss = 0                                  # 损失变量
     
-    # pass the inputs through the encoder
-    for ei in range(input_length):
+    for ei in range(input_length):            # 将输入张量传递进编码器
         encoder_output, encoder_hidden = encoder(input_tensor[ei], encoder_hidden)
         encoder_outputs[ei] = encoder_output[0, 0]
 
-    # create a start-of-sequence tensor for the decoder
-    decoder_input = torch.tensor([[TGT_VOCAB.stoi[SOS_TOKEN]]], device=config.device)
+    decoder_input = torch.tensor(             # 为解码器创建一个序列开始<sos>的张量
+            [[TGT_VOCAB.stoi[SOS_TOKEN]]],
+            device=config.device)
+    decoder_hidden = encoder_hidden           # 将解码器隐藏状态设置为编码器的最终隐藏状态
 
-    # set the decoder hidden state to the final encoder hidden state
-    decoder_hidden = encoder_hidden
+    if random.random() < teacher_forcing_ratio:  # 决定我们是否使用 Teacher Forcing
+        use_teacher_forcing = True  
+    else:
+        use_teacher_forcing = False
 
-    # decide if we will use teacher forcing
-    use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
-
-    for di in range(target_length):
+    for di in range(output_length):
         decoder_output, decoder_hidden = decoder(decoder_input, decoder_hidden)
         topv, topi = decoder_output.topk(1)
-        decoder_input = topi.squeeze().detach()  # detach from history as input
-        loss += criterion(decoder_output, target_tensor[di].unsqueeze(0))
+        decoder_input = topi.squeeze().detach()  # 从解码器输出历史中分离出来作为解码器输入
+        loss += criterion(decoder_output, output_tensor[di].unsqueeze(0))
         if use_teacher_forcing:
-            decoder_input = target_tensor[di]
-        if decoder_input.item() == TGT_VOCAB.stoi[EOS_TOKEN]:
-                break
+            decoder_input = output_tensor[di]
+        if decoder_input.item() == TGT_VOCAB.stoi[EOS_TOKEN]:   # 达到序列结尾<eos>
+            break                                               
 
     loss.backward()
     encoder_optimizer.step()
     decoder_optimizer.step()
-
-    return loss.item() / target_length
+    return loss.item() / output_length
 
 
 '''执行迭代训练'''
-def trainIters(data_train, encoder, decoder, n_iters, print_every=1000, learning_rate=0.01, teacher_forcing_ratio=0.5):
-    print(f'Running {n_iters} epochs...')
+def train(data_train, encoder, decoder, epoch_num, print_every=1000, 
+               learning_rate=0.01, teacher_forcing_ratio=0.5):
+    
+    print(f'Running {epoch_num} epochs...')
     print_loss_total = 0
     print_loss_epoch = 0
-    loss_ls = []
+    loss_ls = []                                                       # 记录损失的列表
+    encoder_optim = optim.SGD(encoder.parameters(), lr=learning_rate)  # 定义编码器优化器
+    decoder_optim = optim.SGD(decoder.parameters(), lr=learning_rate)  # 定义解码器优化器
 
-    encoder_optim = optim.SGD(encoder.parameters(), lr=learning_rate)
-    decoder_optim = optim.SGD(decoder.parameters(), lr=learning_rate)
-
-    batch_iterator = torchtext.data.Iterator(
-        dataset=data_train, batch_size=config.batch_size,
+    batch_iterator = torchtext.data.Iterator(                          # 批迭代器
+        dataset=data_train, batch_size=config.batch_size,              # 批次大小设为1
         sort=False, sort_within_batch=True,
         sort_key=lambda x: len(x.src),
         device=config.device, repeat=False)
-    
-    criterion = nn.NLLLoss()
+    criterion = nn.NLLLoss()                                           # 损失评价指标
 
-    for e in range(n_iters):
-        batch_generator = batch_iterator.__iter__()
+    for e in range(epoch_num):
+        batch_generator = batch_iterator.__iter__()               
         step = 0
         start = time.time()
 
-        for batch in batch_generator:
+        for batch in batch_generator: # 不使用批次，设批次为1是为了选择数据集中的第一条数据
             step += 1
-            
-            # get the input and target from the batch iterator
-            input_tensor, input_lengths = getattr(batch, 'src')
-            target_tensor = getattr(batch, 'tgt')
-            
-            # this is because we're not actually using the batches.
-            # batch size is 1 and this just selects that first one
+            input_tensor, input_lengths = getattr(batch, 'src')    # 从批迭代器中获取输入
+            output_tensor = getattr(batch, 'tgt')                  # 从批迭代器中获取输出
             input_tensor = input_tensor[0]
-            target_tensor = target_tensor[0]
+            output_tensor = output_tensor[0]
 
-            loss = train(input_tensor, target_tensor, encoder, decoder, encoder_optim, decoder_optim, criterion, teacher_forcing_ratio=teacher_forcing_ratio)
+            loss = seq2seq(input_tensor, output_tensor, encoder, decoder,    # 训练模型
+                           encoder_optim, decoder_optim, criterion, 
+                           teacher_forcing_ratio=teacher_forcing_ratio)
             print_loss_total += loss
             print_loss_epoch += loss
             
@@ -315,16 +311,16 @@ def trainIters(data_train, encoder, decoder, n_iters, print_every=1000, learning
         print_loss_epoch = 0
         print(f'End of epoch {e+1}, avg loss {print_loss_avg:.2f}\n')
 
-    # Saving and loading the model
-    torch.save(encoder.state_dict(), config.encoder_save_path)
-    torch.save(decoder.state_dict(), config.decoder_save_path)
+    torch.save(encoder.state_dict(), config.encoder_save_path)   # 存储训练好的编码器模型
+    torch.save(decoder.state_dict(), config.decoder_save_path)   # 存储训练好的解码器模型
     return loss_ls
 
 
-'''使用贪心搜索算法编码器和解码器来进行评估'''
+'''使用贪心搜索算法解码器来进行评估'''
 def evaluate(encoder, decoder, sentence, max_length=MAX_LEN):
     with torch.no_grad():
-        input_tensor = torch.tensor([SRC_VOCAB.stoi[word] for word in sentence], device=config.device)
+        input_tensor = torch.tensor([SRC_VOCAB.stoi[word] for word in sentence], 
+                                    device=config.device)
         input_length = input_tensor.size()[0]
         if input_length > max_length:
             input_length = max_length
@@ -337,7 +333,6 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LEN):
             except:
                 print(ei,input_length)
                 break
-
         decoder_input = torch.tensor([[SRC_VOCAB.stoi[SOS_TOKEN]]], device=config.device)
         decoder_hidden = encoder_hidden
         decoded_words = []
@@ -350,7 +345,6 @@ def evaluate(encoder, decoder, sentence, max_length=MAX_LEN):
             if next_word == EOS_TOKEN:
                 break
             decoder_input = topi.squeeze().detach()
-
         return decoded_words
     
 
@@ -364,7 +358,6 @@ def random_eval(data, encoder, decoder):
         words = evaluate(encoder, decoder, seq)
         print(' '.join(words))
         print()
-
 
 '''评估测试集并将结果保存在txt文件'''
 def eval_test(data, encoder, decoder, save_path):
@@ -385,10 +378,7 @@ def eval_test(data, encoder, decoder, save_path):
 '''评估验证集的BLEU分数'''
 class BLEU_Score():
     def __init__(self, data, encoder, decoder, ngram=4):
-        # THE BLEU EVALUATION HERE
-        # The output of next 2 cells should be the average BLEU score on the dev set
-        # for greedy decoding
-        print("\nGetting BLEU Score of dev dataset:")
+        print("\nGetting BLEU Score of test dataset:")
         self.data = data
         self.encoder = encoder
         self.decoder = decoder
@@ -397,37 +387,43 @@ class BLEU_Score():
         self.BLEU_score = self.bleu(src_unique)
 
     def bleu(self, src_unique):
+        '''
+            返回BLEU分数
+        '''
         BLEU_score = []
         for i, src in enumerate(src_unique):
             BLEU_score.append(self.get_score(src, self.ngram))
         print("BLEU Score:",np.mean(BLEU_score))
         return BLEU_Score
 
-    ###Find all the references
     def get_ref_list(self, src):
+        '''
+            寻找所有ref
+        '''
         ref_list = []
         for e in self.data.examples:
             if e.src == list(src):
                 ref_list.append(e.tgt)
         return(ref_list)
 
-    ###Model Output (Candidate)
     def get_cand(self, src):
+        '''
+            返回预测的ref
+        '''
         cand = evaluate(self.encoder, self.decoder, src)
         return(cand)
 
-    ###Calculate the BLEU score
     def get_score(self, src, ngram):
+        '''
+            计算BLEU分数
+        '''
         cand = self.get_cand(src)
         p_list = []
         ref_list = self.get_ref_list(src)
         
-        #n-gram
-        for n in range(1,ngram + 1):
+        for n in range(1,ngram + 1):      # 遍历n-gram
             ref_vocab_list = []
-
-            ###Build up n-gram dict for all the references
-            for ref in ref_list:
+            for ref in ref_list:          # 为所有ref建立n-gram词典
                 ref_vocab = dict()
                 for i in range(len(ref)-n+1):
                     s = tuple(ref[i:(i+n)])
@@ -436,9 +432,8 @@ class BLEU_Score():
                     else:
                         ref_vocab.update({s:1})
                 ref_vocab_list.append(ref_vocab)
-
-            ###Build up n-gram dict for the candidate
-            cand_vocab = dict()
+            
+            cand_vocab = dict()           # 为candidate建立n-gram词典
             for i in range(len(cand)-n+1):
                 s = tuple(cand[i:(i+n)])
                 if cand_vocab.get(s):
@@ -446,10 +441,10 @@ class BLEU_Score():
                 else:
                     cand_vocab.update({s:1})
 
-            ###Calculate n-gram precision
-            numerator = 0
+            numerator = 0                 # 计算n-gram精度
             for s in cand_vocab:
-                max_ref = max([ref_vocab.get(s) if ref_vocab.get(s) else 0 for ref_vocab in ref_vocab_list])
+                max_ref = max([ref_vocab.get(s) if ref_vocab.get(s) else 0 \
+                               for ref_vocab in ref_vocab_list])
                 max_ref = max_ref if max_ref else 0
                 numerator += max_ref
             try:
@@ -460,8 +455,7 @@ class BLEU_Score():
                 p = p_list[-1]
             p_list.append(p)
         
-        ###Brevity Penalty
-        c = len(cand)
+        c = len(cand)                    # Brevity Penalty (BP惩罚)
         len_list = np.array([len(ref) for ref in ref_list])
         r = len_list[np.argmin(abs(len_list-c))]
         BP = max(1,np.exp(1-r/c))
@@ -507,22 +501,23 @@ def main():
         is_train = False
     
     if not is_train:
+        print("Loading encoder and decoder model")
         encoder.load_state_dict(torch.load(config.encoder_save_path))
         decoder.load_state_dict(torch.load(config.decoder_save_path))
 
     # 训练集用于训练
     if is_train:
-        loss_ls = trainIters(data_train=train_set, 
+        loss_ls = train(data_train=train_set, 
                             encoder=encoder, 
                             decoder=decoder, 
-                            n_iters=config.max_epoch,
+                            epoch_num=config.max_epoch,
                             print_every=1000, 
                             learning_rate=config.lr, 
                             teacher_forcing_ratio=0.5)
     
     # 验证集用于评估和计算BLEU分数
     random_eval(dev_set, encoder, decoder)
-    dev_bleu = BLEU_Score(data=dev_set, 
+    dev_bleu = BLEU_Score(data=test_set, 
                       encoder=encoder,
                       decoder=decoder,
                       ngram=4)
