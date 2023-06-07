@@ -80,18 +80,18 @@ The Golden Palace is a coffee shop with a moderate price range and a customer <e
 'familyFriendly[yes],', 'near[Burger', 'King]']
 <sos> <sos> The Eagle is a a friendly a coffee shop a food a a low It has a a a <eos>
 
-['name[Fitzbillies],', 'eatType[coffee', 'shop],', 'food[English],', 
-'priceRange[£20-25],', 'customer', 'rating[high],', 'area[riverside],', 
-'familyFriendly[yes]']
+['name[Fitzbillies],', 'eatType[coffee', 'shop],', 'food[English],', 'priceRange[£20-25],', 
+'customer', 'rating[high],', 'area[riverside],', 'familyFriendly[yes]']
 coffee shop with a price range of 20-25 pounds. It is located in the riverside area and 
 has a customer rating of 3 out of 5. <eos>
 
 ['name[The', 'Wrestlers],', 'customer', 'rating[low],', 'familyFriendly[no]']
-restaurant is a non family-friendly restaurant that has a customer rating of 1 out of 5. 
-<eos>
+restaurant is a non family-friendly restaurant that has a customer rating of 1 out of 5. <eos>
 
 
 Getting BLEU Score of dev dataset:
 BLEU Score: 0.5340316023952905
 
 Result of test set successfully saved to "result/result.txt"
+
+
