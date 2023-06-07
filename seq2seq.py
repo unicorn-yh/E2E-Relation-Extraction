@@ -508,19 +508,19 @@ def main():
     # 训练集用于训练
     if is_train:
         loss_ls = train(data_train=train_set, 
-                            encoder=encoder, 
-                            decoder=decoder, 
-                            epoch_num=config.max_epoch,
-                            print_every=1000, 
-                            learning_rate=config.lr, 
-                            teacher_forcing_ratio=0.5)
+                        encoder=encoder, 
+                        decoder=decoder, 
+                        epoch_num=config.max_epoch,
+                        print_every=1000, 
+                        learning_rate=config.lr, 
+                        teacher_forcing_ratio=0.5)
     
     # 验证集用于评估和计算BLEU分数
     random_eval(dev_set, encoder, decoder)
     dev_bleu = BLEU_Score(data=test_set, 
-                      encoder=encoder,
-                      decoder=decoder,
-                      ngram=4)
+                          encoder=encoder,
+                          decoder=decoder,
+                          ngram=4)
     
     # 将测试集的预测结果按要求保存在txt文件中
     eval_test(data=test_set, 
