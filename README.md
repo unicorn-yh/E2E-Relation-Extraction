@@ -1,5 +1,5 @@
-# Seq2seq-Text-Generation
- generate text using seq2seq model
+# E2E-Relation-Extraction
+ generate text after extracting and identifying relation between entities in sentence using seq2seq model
 
 <br>
 
